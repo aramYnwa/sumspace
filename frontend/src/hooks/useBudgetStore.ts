@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Envelope, Transaction, DateRange } from '@/types/budget';
 import { startOfMonth, endOfMonth, isWithinInterval, parseISO } from 'date-fns';
-import { apiRequest } from '@/lib/api';
+import { API_BASE, apiRequest } from '@/lib/api';
 
 const CHART_COLORS = [
   'hsl(var(--chart-1))',
@@ -25,6 +25,19 @@ type TransactionResponse = {
   amount: number | string;
   date: string;
   notes?: string | null;
+};
+
+type StatementEntry = {
+  date: string;
+  description: string;
+  amount: number;
+  card_ending?: string;
+};
+
+type StatementResponse = {
+  payments: StatementEntry[];
+  credits: StatementEntry[];
+  debits: StatementEntry[];
 };
 
 const toNumber = (value: number | string | null | undefined) => {
@@ -102,6 +115,20 @@ export function useBudgetStore() {
     setTransactions((prev) => [...prev, normalizeTransaction(created)]);
   };
 
+  const importAmexStatement = async (file: File): Promise<StatementResponse> => {
+    const formData = new FormData();
+    formData.append('file', file);
+    const response = await fetch(`${API_BASE}/api/statements/amex`, {
+      method: 'POST',
+      body: formData,
+    });
+    if (!response.ok) {
+      const message = await response.text();
+      throw new Error(message || `Request failed: ${response.status}`);
+    }
+    return response.json() as Promise<StatementResponse>;
+  };
+
   const updateTransaction = async (id: number, updates: Partial<Omit<Transaction, 'id'>>) => {
     const body: Record<string, unknown> = {};
     if (updates.date !== undefined) body.date = updates.date;
@@ -160,6 +187,7 @@ export function useBudgetStore() {
     setDateRange,
     addEnvelope,
     addTransaction,
+    importAmexStatement,
     updateTransaction,
     getEnvelopeById,
   };

@@ -1,12 +1,12 @@
 from datetime import date
 from typing import List, Optional
 
-from fastapi import Depends, FastAPI, HTTPException
+from fastapi import Depends, FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
-from . import models, schemas
+from . import amex_pdf_extractor, models, schemas
 from .db import SessionLocal, init_db
 
 app = FastAPI(title="Sumspace")
@@ -88,7 +88,6 @@ def update_transaction(
     payload: schemas.TransactionUpdate,
     db: Session = Depends(get_db),
 ) -> models.Transaction:
-    print("Updating transaction", transaction_id, payload)
     transaction = db.query(models.Transaction).filter_by(id=transaction_id).first()
     if not transaction:
         raise HTTPException(status_code=404, detail="Transaction not found")
@@ -98,6 +97,18 @@ def update_transaction(
     db.commit()
     db.refresh(transaction)
     return transaction
+
+
+@app.post("/api/statements/amex")
+def process_amex_statement(file: UploadFile = File(...)) -> dict:
+    if not file.filename or not file.filename.lower().endswith(".pdf"):
+        raise HTTPException(status_code=400, detail="Only PDF statements are supported")
+    try:
+        file.file.seek(0)
+        text = amex_pdf_extractor.extract_text_from_file(file.file)
+    except Exception as exc:  # pragma: no cover - depends on pdfplumber failures
+        raise HTTPException(status_code=400, detail="Failed to read PDF") from exc
+    return amex_pdf_extractor.parse_transactions(text)
 
 
 @app.get("/api/summary", response_model=List[schemas.SummaryItem])
