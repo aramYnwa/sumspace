@@ -102,6 +102,21 @@ export function useBudgetStore() {
     setTransactions((prev) => [...prev, normalizeTransaction(created)]);
   };
 
+  const updateTransaction = async (id: number, updates: Partial<Omit<Transaction, 'id'>>) => {
+    const body: Record<string, unknown> = {};
+    if (updates.date !== undefined) body.date = updates.date;
+    if (updates.merchant !== undefined) body.merchant = updates.merchant;
+    if (updates.amount !== undefined) body.amount = updates.amount;
+    if (updates.notes !== undefined) body.notes = updates.notes ?? null;
+    if (updates.envelopeId !== undefined) body.envelope_id = updates.envelopeId;
+
+    const updated = await apiRequest<TransactionResponse>(`/api/transactions/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(body),
+    });
+    setTransactions((prev) => prev.map((tx) => (tx.id === id ? normalizeTransaction(updated) : tx)));
+  };
+
   const dateFilteredTransactions = useMemo(() => {
     return transactions.filter((transaction) => {
       const transactionDate = parseISO(transaction.date);
@@ -145,6 +160,7 @@ export function useBudgetStore() {
     setDateRange,
     addEnvelope,
     addTransaction,
+    updateTransaction,
     getEnvelopeById,
   };
 }

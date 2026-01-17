@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date as DateType
 from decimal import Decimal
 from typing import Optional
 
@@ -23,7 +23,7 @@ class EnvelopeOut(EnvelopeBase):
 
 
 class TransactionBase(BaseModel):
-    date: date
+    date: DateType
     merchant: str
     amount: Decimal
     notes: Optional[str] = None
@@ -39,6 +39,14 @@ class TransactionOut(TransactionBase):
 
     class Config:
         orm_mode = True
+
+
+class TransactionUpdate(BaseModel):
+    merchant: Optional[str] = None
+    amount: Optional[Decimal] = None
+    date: Optional[DateType] = None
+    notes: Optional[str] = None
+    envelope_id: Optional[int] = None
 
 
 class SummaryItem(BaseModel):
