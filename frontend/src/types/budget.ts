@@ -13,6 +13,7 @@ export interface Transaction {
   amount: number;
   date: string;
   notes?: string | null;
+  card?: string | null;
 }
 
 export type DateRange = {
