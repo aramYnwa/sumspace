@@ -48,11 +48,9 @@ const Index = () => {
     if (!file) return;
     try {
       const result = await importAmexStatement(file);
-      const total =
-        result.debits.length + result.credits.length + result.payments.length;
       toast({
         title: 'Statement processed',
-        description: `Found ${total} transactions.`,
+        description: `Imported ${result.length} transactions.`,
         className: 'border-emerald-500 bg-emerald-50 text-emerald-950',
       });
     } catch (error) {

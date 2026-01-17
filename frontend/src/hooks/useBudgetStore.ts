@@ -25,19 +25,7 @@ type TransactionResponse = {
   amount: number | string;
   date: string;
   notes?: string | null;
-};
-
-type StatementEntry = {
-  date: string;
-  description: string;
-  amount: number;
-  card_ending?: string;
-};
-
-type StatementResponse = {
-  payments: StatementEntry[];
-  credits: StatementEntry[];
-  debits: StatementEntry[];
+  card?: string | null;
 };
 
 const toNumber = (value: number | string | null | undefined) => {
@@ -62,6 +50,7 @@ const normalizeTransaction = (transaction: TransactionResponse): Transaction => 
   amount: toNumber(transaction.amount),
   date: transaction.date,
   notes: transaction.notes ?? null,
+  card: transaction.card ?? null,
 });
 
 export function useBudgetStore() {
@@ -115,7 +104,7 @@ export function useBudgetStore() {
     setTransactions((prev) => [...prev, normalizeTransaction(created)]);
   };
 
-  const importAmexStatement = async (file: File): Promise<StatementResponse> => {
+  const importAmexStatement = async (file: File): Promise<TransactionResponse[]> => {
     const formData = new FormData();
     formData.append('file', file);
     const response = await fetch(`${API_BASE}/api/statements/amex`, {
@@ -126,7 +115,9 @@ export function useBudgetStore() {
       const message = await response.text();
       throw new Error(message || `Request failed: ${response.status}`);
     }
-    return response.json() as Promise<StatementResponse>;
+    const data = await response.json();
+    setTransactions((prev) => [...prev, ...data.map(normalizeTransaction)]);
+    return data as TransactionResponse[];
   };
 
   const updateTransaction = async (id: number, updates: Partial<Omit<Transaction, 'id'>>) => {

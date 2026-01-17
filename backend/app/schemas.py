@@ -27,6 +27,7 @@ class TransactionBase(BaseModel):
     merchant: str
     amount: Decimal
     notes: Optional[str] = None
+    card: Optional[str] = None
     envelope_id: Optional[int] = None
 
 
@@ -46,6 +47,7 @@ class TransactionUpdate(BaseModel):
     amount: Optional[Decimal] = None
     date: Optional[DateType] = None
     notes: Optional[str] = None
+    card: Optional[str] = None
     envelope_id: Optional[int] = None
 
 

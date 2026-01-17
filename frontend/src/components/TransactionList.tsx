@@ -99,6 +99,13 @@ export function TransactionList({ transactions, getEnvelopeById, envelopes, onUp
                     ? getEnvelopeById(transaction.envelopeId)
                     : undefined;
                   const envelopeLabel = envelope?.name ?? 'Unassigned';
+                  const isPositive = transaction.amount >= 0;
+                  const formattedAmount = `${isPositive ? '' : '-'}$${Math.abs(
+                    transaction.amount
+                  ).toFixed(2)}`;
+                  const amountClass = isPositive
+                    ? 'font-mono font-semibold text-emerald-600'
+                    : 'font-mono font-semibold';
                   return (
                     <button
                       key={transaction.id}
@@ -118,8 +125,8 @@ export function TransactionList({ transactions, getEnvelopeById, envelopes, onUp
                           </p>
                         </div>
                       </div>
-                      <span className="font-mono font-semibold">
-                        -${transaction.amount.toFixed(2)}
+                      <span className={amountClass}>
+                        {formattedAmount}
                       </span>
                     </button>
                   );

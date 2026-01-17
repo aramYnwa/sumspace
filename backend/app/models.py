@@ -23,6 +23,7 @@ class Transaction(Base):
     merchant = Column(String(200), nullable=False)
     amount = Column(Numeric(12, 2), nullable=False)
     notes = Column(String(500), nullable=True)
+    card = Column(String(50), nullable=True)
     envelope_id = Column(Integer, ForeignKey("envelopes.id"), nullable=True)
 
     envelope = relationship("Envelope", back_populates="transactions")

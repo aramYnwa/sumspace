@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, datetime
 from typing import List, Optional
 
 from fastapi import Depends, FastAPI, File, HTTPException, UploadFile
@@ -75,7 +75,10 @@ def list_transactions(
 def create_transaction(
     payload: schemas.TransactionCreate, db: Session = Depends(get_db)
 ) -> models.Transaction:
-    transaction = models.Transaction(**payload.dict())
+    data = payload.dict()
+    if data.get("envelope_id") is None:
+        data["envelope_id"] = 1
+    transaction = models.Transaction(**data)
     db.add(transaction)
     db.commit()
     db.refresh(transaction)
@@ -99,8 +102,12 @@ def update_transaction(
     return transaction
 
 
-@app.post("/api/statements/amex")
-def process_amex_statement(file: UploadFile = File(...)) -> dict:
+@app.post("/api/statements/amex", response_model=List[schemas.TransactionOut])
+def process_amex_statement(
+    file: UploadFile = File(...),
+    envelope_id: Optional[int] = None,
+    db: Session = Depends(get_db),
+) -> List[models.Transaction]:
     if not file.filename or not file.filename.lower().endswith(".pdf"):
         raise HTTPException(status_code=400, detail="Only PDF statements are supported")
     try:
@@ -108,7 +115,31 @@ def process_amex_statement(file: UploadFile = File(...)) -> dict:
         text = amex_pdf_extractor.extract_text_from_file(file.file)
     except Exception as exc:  # pragma: no cover - depends on pdfplumber failures
         raise HTTPException(status_code=400, detail="Failed to read PDF") from exc
-    return amex_pdf_extractor.parse_transactions(text)
+    parsed = amex_pdf_extractor.parse_transactions(text)
+    created: List[models.Transaction] = []
+    default_envelope_id = envelope_id or 1
+
+    def add_entries(entries: list[dict[str, object]], sign: int) -> None:
+        for entry in entries:
+            raw_amount = entry["amount"]
+            amount = abs(raw_amount) * sign
+            tx = models.Transaction(
+                date=datetime.strptime(entry["date"], "%m/%d/%y").date(),
+                merchant=entry["description"],
+                amount=amount,
+                envelope_id=default_envelope_id,
+                card=entry.get("card_ending"),
+            )
+            db.add(tx)
+            created.append(tx)
+
+    add_entries(parsed["credits"], 1)
+    add_entries(parsed["debits"], -1)
+
+    db.commit()
+    for tx in created:
+        db.refresh(tx)
+    return created
 
 
 @app.get("/api/summary", response_model=List[schemas.SummaryItem])
