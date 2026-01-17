@@ -82,6 +82,24 @@ def create_transaction(
     return transaction
 
 
+@app.put("/api/transactions/{transaction_id}", response_model=schemas.TransactionOut)
+def update_transaction(
+    transaction_id: int,
+    payload: schemas.TransactionUpdate,
+    db: Session = Depends(get_db),
+) -> models.Transaction:
+    print("Updating transaction", transaction_id, payload)
+    transaction = db.query(models.Transaction).filter_by(id=transaction_id).first()
+    if not transaction:
+        raise HTTPException(status_code=404, detail="Transaction not found")
+    update_data = payload.dict(exclude_unset=True)
+    for key, value in update_data.items():
+        setattr(transaction, key, value)
+    db.commit()
+    db.refresh(transaction)
+    return transaction
+
+
 @app.get("/api/summary", response_model=List[schemas.SummaryItem])
 def get_summary(
     month: str, db: Session = Depends(get_db)

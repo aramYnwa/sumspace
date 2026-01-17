@@ -23,6 +23,7 @@ const Index = () => {
     addEnvelope,
     addTransaction,
     getEnvelopeById,
+    updateTransaction,
   } = useBudgetStore();
 
   const toggleEnvelope = (id: number) => {
@@ -83,7 +84,12 @@ const Index = () => {
 
         <section className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <BudgetProgressChart envelopes={envelopes} />
-          <TransactionList transactions={transactions} getEnvelopeById={getEnvelopeById} />
+          <TransactionList
+            transactions={transactions}
+            getEnvelopeById={getEnvelopeById}
+            envelopes={envelopes}
+            onUpdate={updateTransaction}
+          />
         </section>
       </main>
     </div>
