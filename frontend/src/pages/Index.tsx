@@ -1,3 +1,4 @@
+import { useRef } from 'react';
 import { useBudgetStore } from '@/hooks/useBudgetStore';
 import { Header } from '@/components/Header';
 import { EnvelopeCard } from '@/components/EnvelopeCard';
@@ -10,6 +11,7 @@ import { BudgetProgressChart } from '@/components/BudgetProgressChart';
 import { TransactionList } from '@/components/TransactionList';
 import { SummaryStats } from '@/components/SummaryStats';
 import { Button } from '@/components/ui/button';
+import { useToast } from '@/components/ui/use-toast';
 import { X } from 'lucide-react';
 
 const Index = () => {
@@ -23,8 +25,11 @@ const Index = () => {
     addEnvelope,
     addTransaction,
     getEnvelopeById,
+    importAmexStatement,
     updateTransaction,
   } = useBudgetStore();
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const { toast } = useToast();
 
   const toggleEnvelope = (id: number) => {
     setSelectedEnvelopeIds(
@@ -38,6 +43,30 @@ const Index = () => {
     setSelectedEnvelopeIds([]);
   };
 
+  const handleStatementUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    try {
+      const result = await importAmexStatement(file);
+      const total =
+        result.debits.length + result.credits.length + result.payments.length;
+      toast({
+        title: 'Statement processed',
+        description: `Found ${total} transactions.`,
+        className: 'border-emerald-500 bg-emerald-50 text-emerald-950',
+      });
+    } catch (error) {
+      console.error('Failed to process statement', error);
+      toast({
+        title: 'Statement processing failed',
+        description: 'Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      event.target.value = '';
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <Header />
@@ -47,12 +76,26 @@ const Index = () => {
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           <DateRangeFilter dateRange={dateRange} onDateRangeChange={setDateRange} />
           <div className="flex items-center gap-2">
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="application/pdf"
+              onChange={handleStatementUpload}
+              className="hidden"
+            />
             {selectedEnvelopeIds.length > 0 && (
               <Button variant="ghost" size="sm" onClick={clearFilters}>
                 <X className="h-4 w-4 mr-1" />
                 Clear filters ({selectedEnvelopeIds.length})
               </Button>
             )}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => fileInputRef.current?.click()}
+            >
+              Import statement
+            </Button>
             <AddTransactionDialog envelopes={envelopes} onAdd={addTransaction} />
           </div>
         </div>
